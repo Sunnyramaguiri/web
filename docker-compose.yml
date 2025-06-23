@@ -5,3 +5,4 @@ services:
     image: tomee
     ports:
       - 9090:8080
+...
