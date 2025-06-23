@@ -1,17 +1,24 @@
-FROM node:latest
+# Stage 1: Build the JAR using Maven
+FROM maven:3.9.6-eclipse-temurin-17 AS builder
 
-# Create a new user
-RUN useradd -m appuser
-
-# Create the directory and file directly in the image
-RUN mkdir -p /app && echo "This is Joe's user file" > /app/newuser.txt
-
-# Set working directory
+# Set work directory
 WORKDIR /app
 
-# Switch to the appuser (optional if you want non-root)
-USER appuser
+# Copy pom and source
+COPY pom.xml .
+COPY src ./src
 
-# Dummy command (optional, example)
-CMD ["node"]
+# Build the jar
+RUN mvn clean package -DskipTests
 
+# Stage 2: Run the jar
+FROM eclipse-temurin:17-jdk
+
+# Set work directory
+WORKDIR /app
+
+# Copy jar from builder stage
+COPY --from=builder /app/target/myapp-1.0.0.jar app.jar
+
+# Run app
+CMD ["java", "-jar", "app.jar"]
