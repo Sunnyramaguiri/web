@@ -1,0 +1,7 @@
+---
+version: '3.8'
+services:
+  mydb:
+    image: tomee
+    ports:
+      - 9090:8080
