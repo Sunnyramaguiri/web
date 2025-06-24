@@ -16,9 +16,3 @@ FROM eclipse-temurin:17-jdk
 
 # Set work directory
 WORKDIR /app
-
-# Copy jar from builder stage
-COPY --from=builder /app/target/myapp-1.0.0.jar app.jar
-
-# Run app
-CMD ["java", "-jar", "app.jar"]
