@@ -1,0 +1,92 @@
+pipeline {
+    agent any
+
+    tools {
+        maven 'maven'
+    }
+
+    environment {
+        SONARQUBE_SERVER = 'sonar'
+        TOMCAT_USER = 'jenkins'
+        TOMCAT_HOST = 'ip-172-31-32-90'
+        TOMCAT_WEBAPPS = '/usr/local/tomee/webapps'
+    }
+
+    stages {
+        stage('Clone') {
+            steps {
+                git 'https://github.com/sunnyramagiri/docker-project.git'
+            }
+        }
+
+        stage('Maven Build') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    withSonarQubeEnv(credentialsId: 'sonar') {
+                        sh 'mvn sonar:sonar'
+                    }
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
+                        sh 'docker build -t sunnyramagiri/myno:latest .'
+                    }
+                }
+            }
+        }
+
+        stage('Docker Push') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker', toolName: 'docker') {
+                        sh 'docker push sunnyramagiri/myno:latest'
+                    }
+                }
+            }
+        }
+
+        stage('Docker Container') {
+            steps {
+                script {
+                    // Remove existing container if exists
+                    sh 'docker rm -f tom || true'
+
+                    // Run the Docker image locally
+                    sh 'docker run -d --name tom -p 7070:8080 sunnyramagiri/myno:latest'
+                }
+            }
+        }
+
+        stage('Docker Compose') {
+            steps {
+                script {
+                    sh 'docker compose -p myproject up -d'
+                }
+            }
+        }
+
+        stage('Deploy to Tomcat') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'tomcat', usernameVariable: 'TOMCAT_USER', passwordVariable: 'TOMCAT_PASS')]) {
+                        sh """
+                            curl --upload-file target/*.jar \\
+                                 --user $TOMCAT_USER:$TOMCAT_PASS \\
+                                 http://$TOMCAT_HOST:8080/manager/text/deploy?path=/myno&update=true
+                        """
+                    }
+                }
+            }
+        }
+    } 
+} 
