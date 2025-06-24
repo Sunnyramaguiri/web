@@ -16,3 +16,6 @@ FROM eclipse-temurin:17-jdk
 
 # Set work directory
 WORKDIR /app
+
+
+CMD ["catalina.sh", "run"]
